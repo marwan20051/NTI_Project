@@ -1,0 +1,21 @@
+﻿name: nti-fraud
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.12
+  - ipykernel
+  - seaborn
+  - optuna
+  - imbalanced-learn
+  - jupyterlab
+  - shap
+  - scipy
+  - numpy
+  - joblib
+  - scikit-learn
+  - pandas
+  - xgboost
+  - pytest
+  - matplotlib
+  - catboost
