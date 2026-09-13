@@ -1,4 +1,4 @@
-﻿name: nti-fraud
+name: nti-cmapss
 channels:
   - conda-forge
   - defaults
@@ -7,7 +7,6 @@ dependencies:
   - ipykernel
   - seaborn
   - optuna
-  - imbalanced-learn
   - jupyterlab
   - shap
   - scipy

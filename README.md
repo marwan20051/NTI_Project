@@ -1,89 +1,114 @@
-# Credit Card Fraud Detection
+# Turbofan Engine Remaining Useful Life Prediction
 
-An NTI machine-learning project that compares four classification models on a highly imbalanced real-world credit-card transaction dataset. The goal is to improve fraud detection through imbalance-aware training, hyperparameter tuning, and decision-threshold optimization.
+An NTI machine-learning project that predicts the Remaining Useful Life (RUL) of aircraft turbofan engines from multivariate sensor histories. The project compares four regression models and studies whether degradation-trend features improve predictions across increasingly difficult operating scenarios.
 
 ## Project Status
 
-**Phase:** Repository setup and experiment design
+**Phase:** Dataset validation and experiment design
 
-The team has selected the dataset, models, and evaluation strategy. Data exploration and model implementation are the next milestones.
+The repository foundation and local dataset are ready. Data-loading, exploratory-analysis, feature-engineering, and baseline-model milestones follow.
 
 ## Problem Statement
 
-Fraudulent transactions are rare, so a model can achieve very high accuracy while failing to identify fraud. This project focuses on detecting the minority fraud class and measuring the trade-off between missed fraud and false alarms.
+Unexpected engine failure can cause safety risks, downtime, and expensive maintenance. Predictive maintenance estimates how many operating cycles remain before failure so maintenance can be scheduled earlier. Predictions that are too late are more dangerous than predictions that are slightly early, so the project evaluates both ordinary regression error and NASA's asymmetric scoring function.
 
 ## Dataset
 
-The project uses the [Credit Card Fraud Detection dataset](https://www.kaggle.com/mlg-ulb/creditcardfraud/data) published by the Machine Learning Group at ULB.
+The project uses the [NASA C-MAPSS Turbofan Jet Engine dataset](https://www.kaggle.com/datasets/behrad3d/nasa-cmaps), originally provided by the NASA Ames Prognostics Center of Excellence.
 
-- 284,807 transactions
-- 492 fraudulent transactions
-- Fraud rate of approximately 0.172%
-- `V1` through `V28`: anonymized PCA-transformed numerical features
-- `Time`: seconds elapsed since the first recorded transaction
-- `Amount`: transaction value
-- `Class`: target (`0` for legitimate and `1` for fraud)
+Each row represents one engine at one operating cycle and contains:
 
-The dataset is not stored in this repository. Download `creditcard.csv` from Kaggle and place it in the local `data/raw/` directory after the project structure is added.
+- Engine unit identifier
+- Cycle number
+- Three operating settings
+- Twenty-one sensor measurements
+
+The four scenarios increase in difficulty:
+
+| Scenario | Training engines | Test engines | Operating conditions | Fault modes |
+|---|---:|---:|---:|---:|
+| FD001 | 100 | 100 | 1 | 1 |
+| FD002 | 260 | 259 | 6 | 1 |
+| FD003 | 100 | 100 | 1 | 2 |
+| FD004 | 249 | 248 | 6 | 2 |
+
+The dataset is not committed to Git. Each contributor should download it from Kaggle and extract it locally under `data/raw/cmapss/`.
+
+## Research Question
+
+Can degradation-trend feature engineering improve remaining-useful-life predictions and remain effective when engines operate under multiple conditions and fault modes?
 
 ## Models
 
 The experiment will compare:
 
-1. Logistic Regression
-2. Random Forest
-3. XGBoost
-4. CatBoost
+1. Ridge Regression
+2. Random Forest Regressor
+3. XGBoost Regressor
+4. CatBoost Regressor
 
-Each model will have a reproducible baseline and an improved version. Improvements may include class weighting, training-only resampling, bounded hyperparameter tuning, and validation-only threshold optimization.
+Every model will use the same engine-level partitions, features, target definition, and evaluation code.
+
+## Planned Improvements
+
+- Cap early-life RUL values to reduce unrealistic linear targets.
+- Remove constant and low-information sensors using training data only.
+- Normalize sensor values by operating condition.
+- Create rolling means, standard deviations, changes, and degradation slopes.
+- Tune model hyperparameters using group-aware validation by engine ID.
+- Evaluate a weighted ensemble only after the four individual models are frozen.
 
 ## Evaluation
 
-The primary ranking metric is **area under the precision-recall curve (PR-AUC)**. Accuracy is not suitable as the main metric because of the extreme class imbalance.
+The final comparison will report:
 
-The final comparison will also report:
-
-- Precision, recall, and F1-score
-- ROC-AUC
-- Confusion matrices
+- Root Mean Squared Error (RMSE)
+- Mean Absolute Error (MAE)
+- Coefficient of determination (R²)
+- NASA asymmetric score
 - Training and inference time
-- Estimated false-negative and false-positive cost
 
-The test set will remain untouched until model settings and decision thresholds are fixed.
+Engine IDs, not individual sensor rows, define validation groups. This prevents readings from the same engine appearing in both training and validation data.
 
-## Planned Workflow
+## Workflow
 
-1. Validate and explore the dataset.
-2. Create reproducible train, validation, and test partitions.
-3. Train baseline versions of all four models.
-4. Apply imbalance-aware improvements and tune each model.
-5. Select decision thresholds using validation data only.
-6. Compare final results on the untouched test set.
-7. Explain the winning model and analyze its errors.
+1. Validate and document all FD001–FD004 files.
+2. Explore engine lifetimes, operating conditions, and sensor behavior.
+3. Build a shared engine-level split and evaluation pipeline.
+4. Establish baseline results on FD001.
+5. Add degradation-trend features and tune all four models.
+6. Test the frozen method on FD002, FD003, and FD004.
+7. Analyze prediction errors and model robustness by scenario.
+8. Produce the final report and select the best model.
 
-## Reproducibility Rules
+## Repository Structure
 
-- Never commit the Kaggle dataset or generated model files.
-- Fit preprocessing and resampling only on training data.
-- Use fixed random seeds.
-- Record package versions, parameters, split indices, and experiment results.
-- Perform team work through branches and pull requests.
+```text
+data/                 Local raw and processed data; contents ignored by Git
+models/               Generated model artifacts; contents ignored by Git
+notebooks/            Exploratory and presentation notebooks
+reports/figures/      Generated charts; contents ignored by Git
+src/cmapss_rul/        Python package for data, features, models, and evaluation
+tests/                Automated validation and leakage tests
+environment.yml       Reproducible Conda environment
+```
 
 ## Collaboration
 
-Contributors should create a focused branch for each task, open a pull request, and request review before merging into `main`. Participation remains visible in the commit history and repository contributor insights.
+Each task should have a GitHub Issue, a focused branch, and a pull request reviewed by another team member. Shared data, splitting, feature, and evaluation utilities must be merged before individual model experiments begin.
 
 ## Roadmap
 
-- [x] Select the project topic and dataset
-- [x] Select the four candidate models
-- [x] Define the evaluation strategy
-- [ ] Add the Python project structure and dependencies
-- [ ] Add data validation and exploratory analysis
-- [ ] Train baseline models
-- [ ] Improve and tune the models
-- [ ] Produce the final comparison and report
+- [x] Select the NASA C-MAPSS dataset
+- [x] Define four candidate regression models
+- [x] Download and validate all four scenarios locally
+- [x] Rename the Python package for the new project
+- [ ] Add data-loading and schema-validation code
+- [ ] Add exploratory analysis
+- [ ] Add group-aware validation and common metrics
+- [ ] Train and improve all four models
+- [ ] Compare scenarios and prepare the final report
 
 ## Scope and Limitations
 
-The dataset covers two days of anonymized European card transactions from September 2013. Results therefore do not establish production readiness or generalization to current banking systems. The anonymized PCA features also limit business-level interpretation.
+C-MAPSS contains simulated run-to-failure trajectories rather than measurements from deployed commercial aircraft. Results demonstrate predictive-maintenance methodology but do not establish production readiness. Sensor descriptions and operating scenarios must be interpreted according to the original NASA documentation.
