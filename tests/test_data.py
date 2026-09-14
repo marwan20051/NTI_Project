@@ -6,6 +6,7 @@ from cmapss_rul.data import (
     add_train_rul,
     attach_test_rul,
     last_cycle_rows,
+    make_validation_subset,
     split_by_engine,
 )
 
@@ -47,3 +48,18 @@ def test_split_by_engine_has_no_overlap():
     )
     assert set(train.unit_id).isdisjoint(set(valid.unit_id))
     assert len(set(valid.unit_id)) == 1
+
+
+def test_validation_subset_ends_before_failure():
+    full = add_train_rul(sample_frame())
+    history, snapshots = make_validation_subset(
+        full,
+        min_rul=1,
+        max_rul=2,
+        random_state=42,
+    )
+    assert snapshots["rul"].between(1, 2).all()
+    assert len(snapshots) == full["unit_id"].nunique()
+    assert history.groupby("unit_id")["cycle"].max().tolist() == snapshots[
+        "cycle"
+    ].tolist()

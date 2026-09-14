@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 from sklearn.model_selection import GroupShuffleSplit
 
@@ -77,6 +78,33 @@ def split_by_engine(
     if not set(train["unit_id"]).isdisjoint(set(valid["unit_id"])):
         raise RuntimeError("Engine leakage detected")
     return train, valid
+
+
+def make_validation_subset(
+    frame: pd.DataFrame,
+    min_rul: int = 10,
+    max_rul: int = 100,
+    random_state: int = 42,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Truncate run-to-failure engines to realistic pre-failure snapshots."""
+    if "rul" not in frame:
+        raise ValueError("Validation frame must contain calculated RUL values")
+
+    rng = np.random.default_rng(random_state)
+    histories = []
+    for _, engine in frame.groupby("unit_id", sort=True):
+        lifetime = int(engine["cycle"].max())
+        upper = min(max_rul, lifetime - 1)
+        lower = min(min_rul, upper)
+        sampled_rul = int(rng.integers(lower, upper + 1))
+        cutoff_cycle = lifetime - sampled_rul
+        histories.append(engine.loc[engine["cycle"].le(cutoff_cycle)])
+
+    history = pd.concat(histories).sort_index().copy()
+    snapshots = last_cycle_rows(history)
+    if len(snapshots) != frame["unit_id"].nunique():
+        raise RuntimeError("Validation truncation lost one or more engines")
+    return history, snapshots
 
 
 def load_fd001(
