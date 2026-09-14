@@ -70,6 +70,25 @@ The final comparison will report:
 
 Engine IDs, not individual sensor rows, define validation groups. This prevents readings from the same engine appearing in both training and validation data.
 
+## Model 3: FD001 XGBoost Results
+
+The executed [XGBoost notebook](notebooks/03_xgboost_fd001.ipynb) compares a raw-feature baseline with an improved pipeline using RUL capping, training-only sensor selection, rolling statistics, changes, and degradation slopes. Validation engines are kept separate and truncated before failure to simulate realistic test histories.
+
+| Experiment | RMSE | MAE | R² | NASA score |
+|---|---:|---:|---:|---:|
+| Baseline validation | 24.26 | 19.13 | 0.099 | 291.01 |
+| Improved validation | **17.07** | **13.16** | **0.555** | **99.64** |
+| Improved official FD001 test | **19.19** | **14.56** | **0.787** | **644.80** |
+
+The improved pipeline reduced validation RMSE by **7.20 cycles (29.7%)**. It trained with XGBoost 3.4.1 on the NVIDIA GPU (`device=cuda`); the code automatically falls back to CPU when CUDA is unavailable. The executed notebook contains Matplotlib and Seaborn plots for engine lifetimes, sensor degradation, model comparison, residuals, official predictions, and feature importance.
+
+To reproduce the complete experiment from the repository root:
+
+```powershell
+conda activate nti-cmapss
+jupyter nbconvert --to notebook --execute --inplace notebooks/03_xgboost_fd001.ipynb --ExecutePreprocessor.timeout=1800
+```
+
 ## Workflow
 
 1. Validate and document all FD001–FD004 files.
@@ -103,9 +122,9 @@ Each task should have a GitHub Issue, a focused branch, and a pull request revie
 - [x] Define four candidate regression models
 - [x] Download and validate all four scenarios locally
 - [x] Rename the Python package for the new project
-- [ ] Add data-loading and schema-validation code
-- [ ] Add exploratory analysis
-- [ ] Add group-aware validation and common metrics
+- [x] Add data-loading and schema-validation code
+- [x] Add exploratory analysis for FD001
+- [x] Add group-aware validation and common metrics
 - [ ] Train and improve all four models
 - [ ] Compare scenarios and prepare the final report
 
