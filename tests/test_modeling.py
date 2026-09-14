@@ -1,3 +1,6 @@
+import numpy as np
+import xgboost as xgb
+
 from cmapss_rul.modeling import (
     baseline_parameters,
     improved_parameters,
@@ -19,3 +22,13 @@ def test_improved_model_is_regularized_and_slower_learning():
 
 def test_resolve_device_can_force_cpu():
     assert resolve_device(prefer_gpu=False) == "cpu"
+
+
+def test_cpu_baseline_can_fit_and_predict():
+    parameters = baseline_parameters("cpu")
+    parameters["n_estimators"] = 2
+    model = xgb.XGBRegressor(**parameters)
+    features = np.arange(12, dtype=float).reshape(-1, 1)
+    target = np.linspace(11, 0, num=12)
+    model.fit(features, target, verbose=False)
+    assert model.predict(features[:3]).shape == (3,)
