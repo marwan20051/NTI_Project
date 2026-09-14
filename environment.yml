@@ -8,6 +8,7 @@ dependencies:
   - seaborn
   - optuna
   - jupyterlab
+  - nbconvert
   - shap
   - scipy
   - numpy
