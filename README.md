@@ -89,6 +89,25 @@ conda activate nti-cmapss
 jupyter nbconvert --to notebook --execute --inplace notebooks/03_xgboost_fd001.ipynb --ExecutePreprocessor.timeout=1800
 ```
 
+## Model 4: FD001 CatBoost Results
+
+The executed [CatBoost notebook](notebooks/04_catboost_fd001.ipynb) repeats the same engine-level split, validation cutoffs, RUL target, engineered features, and metrics used by Model 3. This isolates the effect of changing the learning algorithm.
+
+| Experiment | RMSE | MAE | R² | NASA score |
+|---|---:|---:|---:|---:|
+| CatBoost baseline validation | 25.65 | 20.25 | -0.006 | 436.20 |
+| CatBoost improved validation | **17.91** | **13.91** | **0.509** | **109.23** |
+| CatBoost improved official FD001 test | **18.94** | **14.31** | **0.792** | **624.29** |
+
+Feature engineering and regularization reduced CatBoost validation RMSE by **7.74 cycles (30.2%)**. CatBoost used the NVIDIA GPU and stopped at iteration 177. On the official FD001 test, CatBoost slightly outperformed XGBoost: **18.94 versus 19.19 RMSE**, with lower MAE and NASA score as well.
+
+To reproduce Model 4:
+
+```powershell
+conda activate nti-cmapss
+jupyter nbconvert --to notebook --execute --inplace notebooks/04_catboost_fd001.ipynb --ExecutePreprocessor.timeout=1800
+```
+
 ## Workflow
 
 1. Validate and document all FD001–FD004 files.
