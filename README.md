@@ -70,6 +70,32 @@ The final comparison will report:
 
 Engine IDs, not individual sensor rows, define validation groups. This prevents readings from the same engine appearing in both training and validation data.
 
+## Model 2: FD001 Scratch Random Forest Results
+
+Model 2 intentionally uses a hand-written NumPy Random Forest rather than
+`sklearn.ensemble.RandomForestRegressor`. Its bootstrap sampling, feature
+subsampling, CART regression trees, prediction averaging, and split-count
+feature importance are implemented in
+[`src/cmapss_rul/random_forest_scratch.py`](src/cmapss_rul/random_forest_scratch.py).
+
+| Experiment | RMSE | MAE | R² | NASA score |
+|---|---:|---:|---:|---:|
+| Scratch baseline validation | 26.34 | 20.81 | -0.061 | 392.00 |
+| Scratch improved validation | **18.13** | **13.46** | **0.497** | **114.68** |
+| Scratch improved official FD001 test | **20.70** | **15.71** | **0.752** | **841.82** |
+
+The shared engineered features reduced validation RMSE by **8.22 cycles
+(31.2%)**. The implementation is CPU-only and trains more slowly than optimized
+library implementations, but uses the same split, target, features, and metrics
+as Models 3 and 4 for a fair comparison.
+
+To train or reuse its cached artifacts:
+
+```powershell
+conda activate nti-cmapss
+python scripts/train_random_forest.py
+```
+
 ## Model 3: FD001 XGBoost Results
 
 The executed [XGBoost notebook](notebooks/03_xgboost_fd001.ipynb) compares a raw-feature baseline with an improved pipeline using RUL capping, training-only sensor selection, rolling statistics, changes, and degradation slopes. Validation engines are kept separate and truncated before failure to simulate realistic test histories.
@@ -88,29 +114,6 @@ To reproduce the complete experiment from the repository root:
 conda activate nti-cmapss
 jupyter nbconvert --to notebook --execute --inplace notebooks/03_xgboost_fd001.ipynb --ExecutePreprocessor.timeout=1800
 ```
-
-## Model 2: FD001 Scratch Random Forest
-
-Model 2 intentionally uses a hand-written NumPy Random Forest rather than
-`sklearn.ensemble.RandomForestRegressor`. Its bootstrap sampling, feature
-subsampling, CART regression trees, prediction averaging, and split-count
-feature importance are implemented in
-[`src/cmapss_rul/random_forest_scratch.py`](src/cmapss_rul/random_forest_scratch.py).
-
-The trainer uses the same engine-level validation split, RUL cap, raw baseline,
-engineered features, and evaluation metrics as Models 3 and 4. This makes the
-comparison fair while preserving the educational scratch implementation. It is
-CPU-only and will train more slowly than optimized library implementations.
-
-To train Model 2 and save its reusable artifacts:
-
-```powershell
-conda activate nti-cmapss
-python scripts/train_random_forest.py
-```
-
-The normal command reuses a valid cached model. Use `--force` only when you
-intentionally want to rebuild it.
 
 ## Model 4: FD001 CatBoost Results
 
@@ -142,7 +145,7 @@ python scripts/train_catboost.py
 python scripts/train_random_forest.py
 ```
 
-Both training scripts reuse valid cached artifacts. Add `--force` only when you intentionally want to retrain:
+All training scripts reuse valid cached artifacts. Add `--force` only when you intentionally want to retrain:
 
 ```powershell
 python scripts/train_xgboost.py --force
@@ -159,7 +162,7 @@ streamlit run main.py
 
 Open `http://127.0.0.1:8501` if the browser does not open automatically. The app is bound to your own computer only, is not deployed or published, and stops when its terminal process stops.
 
-Model binaries live in `models/`. Metrics, predictions, and figures live under `results/`. Metadata in `models/metadata/` tells Streamlit how to connect those artifacts. Ridge and Random Forest appear as waiting cards until teammates add complete packages using the same convention.
+Model binaries live in `models/`. Metrics, predictions, and figures live under `results/`. Metadata in `models/metadata/` tells Streamlit how to connect those artifacts. Ridge appears as waiting until Model 1 is replaced with a compatible RUL-regression package.
 
 ## Workflow
 
