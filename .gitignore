@@ -1,7 +1,6 @@
 # Python
 __pycache__/
 *.py[cod]
-.pytest_cache/
 
 # Virtual environments
 .venv/
@@ -22,10 +21,4 @@ data/raw/*
 data/processed/*
 !data/processed/.gitkeep
 
-# Trained models
-models/*
-!models/.gitkeep
-
-# Generated figures
-reports/figures/*
-!reports/figures/.gitkeep
+# Trained models and their comparison results are shared in models/.

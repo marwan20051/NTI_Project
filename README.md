@@ -108,6 +108,32 @@ conda activate nti-cmapss
 jupyter nbconvert --to notebook --execute --inplace notebooks/04_catboost_fd001.ipynb --ExecutePreprocessor.timeout=1800
 ```
 
+## Train Once, Compare Quickly
+
+Each model has an independent training entry point. Training saves the fitted model, predictions, metrics, and plots so it only needs to run once:
+
+```powershell
+conda activate nti-cmapss
+python models/train_xgboost.py
+python models/train_catboost.py
+```
+
+Both training scripts reuse valid cached artifacts. Add `--force` only when you intentionally want to retrain:
+
+```powershell
+python models/train_xgboost.py --force
+python models/train_catboost.py --force
+```
+
+The root [`main.py`](main.py) is comparison-only. It reads the saved CSV results, ranks the models using validation RMSE, and generates a comparison chart without importing or training XGBoost or CatBoost:
+
+```powershell
+conda activate nti-cmapss
+python main.py
+```
+
+The comparison table and Matplotlib chart are saved in `models/`. Future models can join the same comparison by saving a `models/<model>_fd001_metrics.csv` file with the shared metrics schema.
+
 ## Workflow
 
 1. Validate and document all FD001–FD004 files.
@@ -122,13 +148,11 @@ jupyter nbconvert --to notebook --execute --inplace notebooks/04_catboost_fd001.
 ## Repository Structure
 
 ```text
-data/                 Local raw and processed data; contents ignored by Git
-models/               Generated model artifacts; contents ignored by Git
-notebooks/            Exploratory and presentation notebooks
-reports/figures/      Generated charts; contents ignored by Git
-src/cmapss_rul/        Python package for data, features, models, and evaluation
-tests/                Automated validation and leakage tests
-environment.yml       Reproducible Conda environment
+data/                  Local raw and processed data; contents ignored by Git
+models/                Training scripts, fitted models, metrics, and comparison outputs
+notebooks/             Exploratory and presentation notebooks
+src/cmapss_rul/         Python package for data, features, models, and evaluation
+environment.yml        Reproducible Conda environment
 ```
 
 ## Collaboration

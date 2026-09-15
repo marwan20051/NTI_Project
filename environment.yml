@@ -16,6 +16,5 @@ dependencies:
   - scikit-learn
   - pandas
   - xgboost
-  - pytest
   - matplotlib
   - catboost
