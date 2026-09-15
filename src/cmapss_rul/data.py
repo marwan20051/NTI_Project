@@ -6,11 +6,7 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import GroupShuffleSplit
 
-CMAPSS_COLUMNS = (
-    ["unit_id", "cycle"]
-    + [f"setting_{index}" for index in range(1, 4)]
-    + [f"sensor_{index}" for index in range(1, 22)]
-)
+from cmapss_rul.schema import CMAPSS_COLUMNS
 
 
 def load_sensor_file(path: Path) -> pd.DataFrame:

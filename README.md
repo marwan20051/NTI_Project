@@ -108,31 +108,33 @@ conda activate nti-cmapss
 jupyter nbconvert --to notebook --execute --inplace notebooks/04_catboost_fd001.ipynb --ExecutePreprocessor.timeout=1800
 ```
 
-## Train Once, Compare Quickly
+## Train Once, Explore Locally
 
 Each model has an independent training entry point. Training saves the fitted model, predictions, metrics, and plots so it only needs to run once:
 
 ```powershell
 conda activate nti-cmapss
-python models/train_xgboost.py
-python models/train_catboost.py
+python scripts/train_xgboost.py
+python scripts/train_catboost.py
 ```
 
 Both training scripts reuse valid cached artifacts. Add `--force` only when you intentionally want to retrain:
 
 ```powershell
-python models/train_xgboost.py --force
-python models/train_catboost.py --force
+python scripts/train_xgboost.py --force
+python scripts/train_catboost.py --force
 ```
 
-The root [`main.py`](main.py) is comparison-only. It reads the saved CSV results, ranks the models using validation RMSE, and generates a comparison chart without importing or training XGBoost or CatBoost:
+The root [`main.py`](main.py) is a local Streamlit dashboard. It reads saved artifacts for model comparison, diagnostics, and uploaded-engine inference. It never imports a training script or trains a model:
 
 ```powershell
 conda activate nti-cmapss
-python main.py
+streamlit run main.py
 ```
 
-The comparison table and Matplotlib chart are saved in `models/`. Future models can join the same comparison by saving a `models/<model>_fd001_metrics.csv` file with the shared metrics schema.
+Open `http://127.0.0.1:8501` if the browser does not open automatically. The app is bound to your own computer only, is not deployed or published, and stops when its terminal process stops.
+
+Model binaries live in `models/`. Metrics, predictions, and figures live under `results/`. Metadata in `models/metadata/` tells Streamlit how to connect those artifacts. Ridge and Random Forest appear as waiting cards until teammates add complete packages using the same convention.
 
 ## Workflow
 
@@ -149,9 +151,12 @@ The comparison table and Matplotlib chart are saved in `models/`. Future models 
 
 ```text
 data/                  Local raw and processed data; contents ignored by Git
-models/                Training scripts, fitted models, metrics, and comparison outputs
+models/                Fitted model binaries and inference metadata
 notebooks/             Exploratory and presentation notebooks
+results/               Saved metrics, predictions, and figures
+scripts/               Independent model-training entry points
 src/cmapss_rul/         Python package for data, features, models, and evaluation
+main.py                 Local Streamlit dashboard; inference only
 environment.yml        Reproducible Conda environment
 ```
 
