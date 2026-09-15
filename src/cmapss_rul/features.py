@@ -20,8 +20,25 @@ def select_sensors(
         for column in sensors
         if train_frame[column].var() > variance_floor
     ]
-    correlations = train_frame[variable].corrwith(train_frame["rul"]).abs()
-    return correlations.sort_values(ascending=False).head(top_n).index.tolist()
+    target = train_frame["rul"].to_numpy(dtype=float)
+    centered_target = target - target.mean()
+    target_norm = float(np.sqrt(np.square(centered_target).sum()))
+    correlations: dict[str, float] = {}
+    for column in variable:
+        values = train_frame[column].to_numpy(dtype=float)
+        centered_values = values - values.mean()
+        denominator = float(
+            np.sqrt(np.square(centered_values).sum()) * target_norm
+        )
+        correlation = (
+            0.0
+            if denominator == 0.0
+            else float(np.multiply(centered_values, centered_target).sum())
+            / denominator
+        )
+        correlations[column] = abs(correlation)
+    ranked = pd.Series(correlations, dtype=float).sort_values(ascending=False)
+    return ranked.head(top_n).index.tolist()
 
 
 def nonconstant_sensor_columns(
