@@ -18,3 +18,5 @@ dependencies:
   - xgboost
   - matplotlib
   - catboost
+  - streamlit
+  - plotly
