@@ -89,6 +89,29 @@ conda activate nti-cmapss
 jupyter nbconvert --to notebook --execute --inplace notebooks/03_xgboost_fd001.ipynb --ExecutePreprocessor.timeout=1800
 ```
 
+## Model 2: FD001 Scratch Random Forest
+
+Model 2 intentionally uses a hand-written NumPy Random Forest rather than
+`sklearn.ensemble.RandomForestRegressor`. Its bootstrap sampling, feature
+subsampling, CART regression trees, prediction averaging, and split-count
+feature importance are implemented in
+[`src/cmapss_rul/random_forest_scratch.py`](src/cmapss_rul/random_forest_scratch.py).
+
+The trainer uses the same engine-level validation split, RUL cap, raw baseline,
+engineered features, and evaluation metrics as Models 3 and 4. This makes the
+comparison fair while preserving the educational scratch implementation. It is
+CPU-only and will train more slowly than optimized library implementations.
+
+To train Model 2 and save its reusable artifacts:
+
+```powershell
+conda activate nti-cmapss
+python scripts/train_random_forest.py
+```
+
+The normal command reuses a valid cached model. Use `--force` only when you
+intentionally want to rebuild it.
+
 ## Model 4: FD001 CatBoost Results
 
 The executed [CatBoost notebook](notebooks/04_catboost_fd001.ipynb) repeats the same engine-level split, validation cutoffs, RUL target, engineered features, and metrics used by Model 3. This isolates the effect of changing the learning algorithm.
@@ -116,6 +139,7 @@ Each model has an independent training entry point. Training saves the fitted mo
 conda activate nti-cmapss
 python scripts/train_xgboost.py
 python scripts/train_catboost.py
+python scripts/train_random_forest.py
 ```
 
 Both training scripts reuse valid cached artifacts. Add `--force` only when you intentionally want to retrain:
@@ -123,6 +147,7 @@ Both training scripts reuse valid cached artifacts. Add `--force` only when you 
 ```powershell
 python scripts/train_xgboost.py --force
 python scripts/train_catboost.py --force
+python scripts/train_random_forest.py --force
 ```
 
 The root [`main.py`](main.py) is a local Streamlit dashboard. It reads saved artifacts for model comparison, diagnostics, and uploaded-engine inference. It never imports a training script or trains a model:
