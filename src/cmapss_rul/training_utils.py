@@ -221,7 +221,8 @@ def save_training_plot(
         ylim=(0, limit),
     )
     figure.tight_layout()
-    path = figure_dir / f"{algorithm.lower()}_fd001_run_summary.png"
+    file_stem = algorithm.lower().replace(" ", "_")
+    path = figure_dir / f"{file_stem}_fd001_run_summary.png"
     figure.savefig(path, dpi=160, bbox_inches="tight")
     plt.close(figure)
     return path
