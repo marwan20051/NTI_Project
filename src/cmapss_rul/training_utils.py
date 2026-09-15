@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from collections.abc import Callable
 from pathlib import Path
 
@@ -48,9 +49,82 @@ def cache_is_complete(
     try:
         metrics = pd.read_csv(artifacts["metrics"])
         predictions = pd.read_csv(artifacts["predictions"])
+        metadata = json.loads(artifacts["metadata"].read_text(encoding="utf-8"))
         model_validator(artifacts["model"])
     except Exception:
         return False
+
+    if not isinstance(metadata, dict):
+        return False
+    required_metadata = {
+        "id",
+        "serializer",
+        "model_file",
+        "metrics_file",
+        "predictions_file",
+        "selected_sensors",
+        "windows",
+        "rul_cap",
+    }
+    if not required_metadata.issubset(metadata):
+        return False
+    if not isinstance(metadata["id"], str) or not metadata["id"]:
+        return False
+    if metadata["serializer"] not in {"xgboost", "catboost", "joblib"}:
+        return False
+    if not (
+        isinstance(metadata["selected_sensors"], list)
+        and metadata["selected_sensors"]
+        and all(
+            isinstance(sensor, str) and sensor
+            for sensor in metadata["selected_sensors"]
+        )
+    ):
+        return False
+    if not (
+        isinstance(metadata["windows"], list)
+        and metadata["windows"]
+        and all(
+            isinstance(window, int) and window > 0
+            for window in metadata["windows"]
+        )
+    ):
+        return False
+    try:
+        rul_cap = float(metadata["rul_cap"])
+    except (TypeError, ValueError):
+        return False
+    if not np.isfinite(rul_cap) or rul_cap <= 0:
+        return False
+    feature_columns = metadata.get("feature_columns")
+    if feature_columns is not None and not (
+        isinstance(feature_columns, list)
+        and feature_columns
+        and all(isinstance(column, str) and column for column in feature_columns)
+    ):
+        return False
+
+    metadata_path = artifacts["metadata"].resolve()
+    try:
+        project_root = metadata_path.parents[2]
+    except IndexError:
+        return False
+    metadata_artifacts = {
+        "model": "model_file",
+        "metrics": "metrics_file",
+        "predictions": "predictions_file",
+    }
+    for artifact_key, metadata_key in metadata_artifacts.items():
+        relative_path = metadata[metadata_key]
+        if not isinstance(relative_path, str) or not relative_path:
+            return False
+        declared_path = Path(relative_path)
+        if declared_path.is_absolute():
+            return False
+        if (project_root / declared_path).resolve() != artifacts[
+            artifact_key
+        ].resolve():
+            return False
 
     numeric_metric_columns = [
         "train_seconds",

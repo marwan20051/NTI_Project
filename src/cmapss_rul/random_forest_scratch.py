@@ -200,8 +200,7 @@ class RandomForestScratch:
         self.trees_ = []
         self._split_counts = np.zeros(self.n_features_in_, dtype=float)
         self._rng = np.random.default_rng(self.random_state)
-        sample_count = max(2 * self.min_samples_leaf, math.ceil(self.max_samples * len(features)))
-        sample_count = min(sample_count, len(features))
+        sample_count = math.ceil(self.max_samples * len(features))
         report_interval = max(1, self.n_estimators // 5)
 
         for tree_index in range(self.n_estimators):
