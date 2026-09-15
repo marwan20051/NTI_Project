@@ -47,7 +47,17 @@ ARTIFACTS = {
 }
 COEFFICIENTS_FILE = METRIC_DIR / "ridge_fd001_coefficients.csv"
 SUMMARY_FIGURE = FIGURE_DIR / "ridge_fd001_run_summary.png"
-ALPHA_CANDIDATES = (0.01, 0.1, 1.0, 10.0, 100.0, 1000.0)
+ALPHA_CANDIDATES = (
+    0.01,
+    0.1,
+    1.0,
+    10.0,
+    100.0,
+    1000.0,
+    2000.0,
+    5000.0,
+    10000.0,
+)
 
 
 def _ridge_pipeline(alpha: float) -> Pipeline:
@@ -82,14 +92,54 @@ def _extra_cache_files_valid() -> bool:
         return False
     try:
         coefficients = pd.read_csv(COEFFICIENTS_FILE)
+        metadata = json.loads(
+            ARTIFACTS["metadata"].read_text(encoding="utf-8")
+        )
+        model = joblib.load(ARTIFACTS["model"])
     except Exception:
         return False
-    return bool(
-        not coefficients.empty
-        and {"feature", "coefficient", "absolute_coefficient"}.issubset(
-            coefficients.columns
-        )
+    required_columns = {"feature", "coefficient", "absolute_coefficient"}
+    if not required_columns.issubset(coefficients.columns):
+        return False
+    feature_columns = metadata.get("feature_columns")
+    if not isinstance(feature_columns, list) or not feature_columns:
+        return False
+    if (
+        len(coefficients) != len(feature_columns)
+        or not coefficients["feature"].is_unique
+        or set(coefficients["feature"]) != set(feature_columns)
+    ):
+        return False
+    numeric = coefficients[["coefficient", "absolute_coefficient"]].apply(
+        pd.to_numeric,
+        errors="coerce",
     )
+    if not np.isfinite(numeric.to_numpy(dtype=float)).all():
+        return False
+    if not np.allclose(
+        numeric["absolute_coefficient"],
+        numeric["coefficient"].abs(),
+    ):
+        return False
+    if not isinstance(model, Pipeline) or not isinstance(
+        model.named_steps.get("ridge"),
+        Ridge,
+    ):
+        return False
+    ridge = model.named_steps["ridge"]
+    try:
+        saved_alpha = float(metadata["selected_alpha"])
+        model_alpha = float(ridge.alpha)
+    except (KeyError, TypeError, ValueError):
+        return False
+    if not np.isfinite(saved_alpha) or not np.isclose(saved_alpha, model_alpha):
+        return False
+    model_features = list(getattr(model, "feature_names_in_", []))
+    if model_features != feature_columns:
+        return False
+    coefficient_by_feature = coefficients.set_index("feature")["coefficient"]
+    saved_in_model_order = coefficient_by_feature.loc[feature_columns].to_numpy()
+    return bool(np.allclose(saved_in_model_order, ridge.coef_))
 
 
 def _save_metadata(
@@ -132,9 +182,10 @@ def _timed_fit(
 def _timed_predict(
     model: Pipeline,
     features: pd.DataFrame,
+    upper_limit: float | None = RUL_CAP,
 ) -> tuple[np.ndarray, float]:
     started = time.perf_counter()
-    predictions = np.clip(model.predict(features), 0.0, RUL_CAP)
+    predictions = np.clip(model.predict(features), 0.0, upper_limit)
     return predictions, time.perf_counter() - started
 
 
@@ -197,6 +248,7 @@ def train(force: bool = False) -> pd.DataFrame:
     baseline_predictions, baseline_predict_seconds = _timed_predict(
         baseline_model,
         baseline_valid,
+        upper_limit=None,
     )
     baseline_metrics = regression_metrics(
         validation_snapshots["rul"],

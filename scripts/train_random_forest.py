@@ -115,9 +115,10 @@ def _timed_fit(
 def _timed_predict(
     model: RandomForestScratch,
     features: pd.DataFrame,
+    upper_limit: float | None = RUL_CAP,
 ) -> tuple[np.ndarray, float]:
     started = time.perf_counter()
-    predictions = np.clip(model.predict(features), 0.0, RUL_CAP)
+    predictions = np.clip(model.predict(features), 0.0, upper_limit)
     return predictions, time.perf_counter() - started
 
 
@@ -174,6 +175,7 @@ def train(force: bool = False) -> pd.DataFrame:
     baseline_predictions, baseline_predict_seconds = _timed_predict(
         baseline_model,
         baseline_valid,
+        upper_limit=None,
     )
     baseline_metrics = regression_metrics(
         validation_snapshots["rul"],

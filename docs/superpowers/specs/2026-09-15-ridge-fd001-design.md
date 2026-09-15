@@ -34,7 +34,9 @@ compatible.
 Both baseline and improved models use a scikit-learn pipeline containing
 `StandardScaler` followed by `Ridge`. The baseline uses raw features and a fixed
 alpha of 1. The improved model evaluates alpha values `0.01`, `0.1`, `1`, `10`,
-`100`, and `1000` using validation RMSE, with NASA score and MAE as tie-breakers.
+`100`, `1000`, `2000`, `5000`, and `10000` using validation RMSE, with NASA
+score and MAE as tie-breakers. Values above 1000 ensure the selected alpha is
+not merely the upper boundary of the search.
 Official test data does not influence alpha selection.
 
 After selecting alpha, the final pipeline is fitted on all FD001 training rows
