@@ -15,7 +15,7 @@
 **Files:**
 - Modify: `main.py` after `build_comparison`
 
-- [ ] **Step 1: Run the failing import check**
+- [x] **Step 1: Run the failing import check**
 
 ```powershell
 conda run --no-capture-output -n nti-cmapss python -B -c "from main import select_dashboard_winners"
@@ -23,7 +23,7 @@ conda run --no-capture-output -n nti-cmapss python -B -c "from main import selec
 
 Expected: FAIL with `ImportError` because the helper does not exist.
 
-- [ ] **Step 2: Add pure selection and award helpers**
+- [x] **Step 2: Add pure selection and award helpers**
 
 ```python
 def _lowest_finite_row(comparison: pd.DataFrame, column: str) -> pd.Series | None:
@@ -64,7 +64,7 @@ def award_labels(comparison: pd.DataFrame) -> dict[str, str]:
     return {model: " · ".join(labels) for model, labels in awards.items()}
 ```
 
-- [ ] **Step 3: Run selection smoke tests**
+- [x] **Step 3: Run selection smoke tests**
 
 ```powershell
 @'
@@ -94,7 +94,7 @@ Expected: `winner selection checks passed`.
 **Files:**
 - Modify: `main.py` in `_inject_style` and before `render_overview`
 
-- [ ] **Step 1: Add responsive Decision center CSS**
+- [x] **Step 1: Add responsive Decision center CSS**
 
 ```css
 .decision-grid {display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin: .55rem 0 .9rem;}
@@ -109,7 +109,7 @@ Expected: `winner selection checks passed`.
 @media (max-width: 900px) {.decision-grid {grid-template-columns: 1fr;}}
 ```
 
-- [ ] **Step 2: Add a safe card HTML helper**
+- [x] **Step 2: Add a safe card HTML helper**
 
 ```python
 def _decision_card(css_class: str, award: str, model: str, value: str, reason: str) -> str:
@@ -123,7 +123,7 @@ def _decision_card(css_class: str, award: str, model: str, value: str, reason: s
     """
 ```
 
-- [ ] **Step 3: Add `render_decision_center`**
+- [x] **Step 3: Add `render_decision_center`**
 
 ```python
 def render_decision_center(comparison: pd.DataFrame) -> None:
@@ -180,7 +180,7 @@ def render_decision_center(comparison: pd.DataFrame) -> None:
     )
 ```
 
-- [ ] **Step 4: Compile the renderer**
+- [x] **Step 4: Compile the renderer**
 
 ```powershell
 conda run --no-capture-output -n nti-cmapss python -B -m py_compile main.py
@@ -193,16 +193,16 @@ Expected: exit code 0.
 **Files:**
 - Modify: `main.py` in `render_overview` and `render_comparison`
 
-- [ ] **Step 1: Call `render_decision_center(comparison)` first in Overview**
+- [x] **Step 1: Call `render_decision_center(comparison)` first in Overview**
 
 Delete the old two-column validation/test message block so the conclusion is
 not duplicated.
 
-- [ ] **Step 2: Call `render_decision_center(comparison)` after the empty guard in Compare models**
+- [x] **Step 2: Call `render_decision_center(comparison)` after the empty guard in Compare models**
 
 Keep the existing note explaining that the table ranks by validation RMSE.
 
-- [ ] **Step 3: Add the leaderboard award column**
+- [x] **Step 3: Add the leaderboard award column**
 
 ```python
 awards = award_labels(comparison)
@@ -230,7 +230,7 @@ leaderboard = leaderboard_source[
 ].copy()
 ```
 
-- [ ] **Step 4: Verify the inference-only boundary**
+- [x] **Step 4: Verify the inference-only boundary**
 
 ```powershell
 rg -n "\.fit\(|train_ridge|train_random_forest|cmapss_rul\.data" main.py
@@ -238,7 +238,7 @@ rg -n "\.fit\(|train_ridge|train_random_forest|cmapss_rul\.data" main.py
 
 Expected: no matches.
 
-- [ ] **Step 5: Commit the feature**
+- [x] **Step 5: Commit the feature**
 
 ```powershell
 git add main.py
@@ -251,7 +251,7 @@ git commit -m "feat: highlight model winners in dashboard"
 - Verify: `main.py`
 - Verify: `.streamlit/config.toml`
 
-- [ ] **Step 1: Run Streamlit AppTest**
+- [x] **Step 1: Run Streamlit AppTest**
 
 ```powershell
 @'
@@ -271,7 +271,7 @@ print("winner dashboard AppTest passed")
 
 Expected: `winner dashboard AppTest passed` and no exceptions.
 
-- [ ] **Step 2: Run final checks**
+- [x] **Step 2: Run final checks**
 
 ```powershell
 conda run --no-capture-output -n nti-cmapss python -B -m compileall -q main.py scripts src
@@ -282,7 +282,7 @@ git status --short --branch
 Expected: compilation and diff check exit 0; only intentional plan progress may
 remain.
 
-- [ ] **Step 3: Inspect locally**
+- [x] **Step 3: Inspect locally**
 
 ```powershell
 conda activate nti-cmapss
@@ -293,7 +293,7 @@ Expected: Overview and Compare models show Ridge as Recommended and Fastest,
 CatBoost as Official-test leader, and award badges in the leaderboard without
 retraining any model.
 
-- [ ] **Step 4: Commit completed plan state if checkboxes were updated**
+- [x] **Step 4: Commit completed plan state if checkboxes were updated**
 
 ```powershell
 git add docs/superpowers/plans/2026-09-16-dashboard-winner-cards.md
