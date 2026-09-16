@@ -307,6 +307,51 @@ def build_comparison(registry: list[dict[str, Any]]) -> pd.DataFrame:
     return comparison
 
 
+def _lowest_finite_row(
+    comparison: pd.DataFrame,
+    column: str,
+) -> pd.Series | None:
+    """Return the deterministic minimum finite row for one metric."""
+    if comparison.empty or column not in comparison:
+        return None
+    values = pd.to_numeric(comparison[column], errors="coerce")
+    candidates = comparison.loc[np.isfinite(values)].copy()
+    if candidates.empty:
+        return None
+    candidates[column] = pd.to_numeric(candidates[column])
+    return candidates.sort_values([column, "model"], kind="stable").iloc[0]
+
+
+def select_dashboard_winners(
+    comparison: pd.DataFrame,
+) -> dict[str, pd.Series | None]:
+    """Select accuracy and speed leaders without combining unlike metrics."""
+    return {
+        "validation": _lowest_finite_row(comparison, "validation_rmse"),
+        "official": _lowest_finite_row(comparison, "test_rmse"),
+        "speed": _lowest_finite_row(comparison, "train_seconds"),
+        "prediction": _lowest_finite_row(comparison, "predict_seconds"),
+    }
+
+
+def award_labels(comparison: pd.DataFrame) -> dict[str, str]:
+    """Map model names to every comparison award they hold."""
+    awards: dict[str, list[str]] = {
+        str(model): []
+        for model in comparison.get("model", pd.Series(dtype=str))
+    }
+    winners = select_dashboard_winners(comparison)
+    for key, label in (
+        ("validation", "🏆 Recommended"),
+        ("official", "🎯 Test leader"),
+        ("speed", "⚡ Fastest"),
+    ):
+        winner = winners[key]
+        if winner is not None:
+            awards.setdefault(str(winner["model"]), []).append(label)
+    return {model: " · ".join(labels) for model, labels in awards.items()}
+
+
 @st.cache_data(show_spinner=False)
 def dataset_summary(signatures: tuple[tuple[str, int, int], ...]) -> dict[str, int]:
     train_path = Path(signatures[0][0])
@@ -463,13 +508,118 @@ def _inject_style() -> None:
         .model-description {font-size: .88rem; color: #94a3b8; min-height: 45px;}
         .model-reason {font-size: .72rem; color: #94a3b8; margin-top: .35rem; line-height: 1.2;}
         .ready {color: #4ade80; font-weight: 700;} .waiting {color: #fbbf24; font-weight: 700;}
+        .decision-grid {display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+                        gap: 1rem; margin: .55rem 0 .9rem;}
+        .decision-card {padding: 1.2rem; border-radius: 18px; min-height: 175px;
+                        background: rgba(15,23,42,.88); border: 1px solid rgba(148,163,184,.18);
+                        box-shadow: 0 12px 28px rgba(0,0,0,.18);}
+        .decision-card.gold {border-top: 4px solid #FBBF24;}
+        .decision-card.purple {border-top: 4px solid #A78BFA;}
+        .decision-card.cyan {border-top: 4px solid #22D3EE;}
+        .decision-award {font-size: .76rem; letter-spacing: .1em; text-transform: uppercase;
+                         color: #CBD5E1; font-weight: 800;}
+        .decision-model {font-size: 1.45rem; color: #F8FAFC; font-weight: 800; margin: .45rem 0;}
+        .decision-value {font-size: 1.05rem; color: #7DD3FC; font-weight: 700;}
+        .decision-reason {font-size: .84rem; color: #94A3B8; margin-top: .45rem; line-height: 1.35;}
         .section-note {padding: .8rem 1rem; border-left: 3px solid #38bdf8;
                        background: rgba(14, 165, 233, .08); border-radius: 0 10px 10px 0;}
         div[data-testid="stMetric"] {background: rgba(15,23,42,.7); border: 1px solid rgba(148,163,184,.16);
                                      padding: .8rem; border-radius: 14px;}
+        @media (max-width: 900px) {.decision-grid {grid-template-columns: 1fr;}}
         </style>
         """,
         unsafe_allow_html=True,
+    )
+
+
+def _decision_card(
+    css_class: str,
+    award: str,
+    model: str,
+    value: str,
+    reason: str,
+) -> str:
+    return (
+        f'<div class="decision-card {css_class}">'
+        f'<div class="decision-award">{escape(award)}</div>'
+        f'<div class="decision-model">{escape(model)}</div>'
+        f'<div class="decision-value">{escape(value)}</div>'
+        f'<div class="decision-reason">{escape(reason)}</div>'
+        "</div>"
+    )
+
+
+def render_decision_center(comparison: pd.DataFrame) -> None:
+    """Explain the validation, official-test, and speed leaders."""
+    st.subheader("Decision center")
+    if comparison.empty:
+        st.info("Complete model packages are required before winners can be selected.")
+        return
+
+    winners = select_dashboard_winners(comparison)
+    validation = winners["validation"]
+    official = winners["official"]
+    speed = winners["speed"]
+    prediction = winners["prediction"]
+    cards: list[str] = []
+
+    if validation is not None:
+        cards.append(
+            _decision_card(
+                "gold",
+                "🏆 Recommended model",
+                str(validation["model"]),
+                f"Validation RMSE {validation['validation_rmse']:.2f} cycles",
+                "Lowest validation error—the correct result to use for model selection.",
+            )
+        )
+    if official is None:
+        cards.append(
+            _decision_card(
+                "purple",
+                "🎯 Official-test leader",
+                "Not available",
+                "No official-test metric",
+                "Test performance will appear when a complete result is saved.",
+            )
+        )
+    else:
+        cards.append(
+            _decision_card(
+                "purple",
+                "🎯 Official-test leader",
+                str(official["model"]),
+                f"Official-test RMSE {official['test_rmse']:.2f} cycles",
+                "Lowest reported test error; shown separately to avoid test-driven selection.",
+            )
+        )
+    if speed is not None:
+        prediction_note = ""
+        if prediction is not None and prediction["model"] != speed["model"]:
+            prediction_note = (
+                f" Prediction is fastest with {prediction['model']} "
+                f"({prediction['predict_seconds']:.4f}s)."
+            )
+        cards.append(
+            _decision_card(
+                "cyan",
+                "⚡ Speed champion",
+                str(speed["model"]),
+                (
+                    f"Train {speed['train_seconds']:.3f}s · "
+                    f"predict {speed['predict_seconds']:.4f}s"
+                ),
+                "Lowest saved training time." + prediction_note,
+            )
+        )
+
+    st.markdown(
+        '<div class="decision-grid">' + "".join(cards) + "</div>",
+        unsafe_allow_html=True,
+    )
+    st.caption(
+        "Choose models using validation performance. Official-test results report "
+        "generalization; speed describes computational cost."
     )
 
 
@@ -477,6 +627,7 @@ def render_overview(
     registry: list[dict[str, Any]],
     comparison: pd.DataFrame,
 ) -> None:
+    render_decision_center(comparison)
     st.subheader("Model readiness")
     columns = st.columns(4)
     for column, entry in zip(columns, registry):
@@ -519,36 +670,30 @@ def render_overview(
     else:
         st.info("Local FD001 data is not present. Saved model comparisons still work.")
 
-    if not comparison.empty:
-        winner = comparison.iloc[0]
-        official = comparison.dropna(subset=["test_rmse"])
-        left, right = st.columns(2)
-        left.success(
-            f"Validation selection: **{winner['model']}** — "
-            f"RMSE {winner['validation_rmse']:.2f} cycles"
-        )
-        if not official.empty:
-            official_winner = official.loc[official["test_rmse"].idxmin()]
-            right.info(
-                f"Lowest official-test error: **{official_winner['model']}** — "
-                f"RMSE {official_winner['test_rmse']:.2f} cycles"
-            )
-
 
 def render_comparison(comparison: pd.DataFrame) -> None:
     if comparison.empty:
         st.warning("No complete model result package is available yet.")
         return
 
+    render_decision_center(comparison)
     st.markdown(
         '<div class="section-note">Models are ranked using validation RMSE. '
         "Official-test performance is reported separately to avoid selecting a model on test data.</div>",
         unsafe_allow_html=True,
     )
     st.write("")
-    leaderboard = comparison[
+    awards = award_labels(comparison)
+    leaderboard_source = comparison.copy()
+    leaderboard_source.insert(
+        1,
+        "award",
+        leaderboard_source["model"].map(awards).fillna(""),
+    )
+    leaderboard = leaderboard_source[
         [
             "rank",
+            "award",
             "model",
             "device",
             "validation_rmse",
